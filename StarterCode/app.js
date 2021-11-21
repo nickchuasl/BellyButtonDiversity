@@ -1,6 +1,6 @@
 function init() {
     // Grab a reference to the dropdown select element
-    var selector = d3.select("#selDataset");
+    var dropdownMenu = d3.select("#selDataset");
   
     // Use the list of sample names to populate the select options
     d3.json("samples.json").then((data) => {
@@ -12,31 +12,31 @@ function init() {
       });
   
       sampleNames.forEach((sample) => {
-        selector
+        dropdownMenu
           .append("option")
           .text(sample)
           .property("value", sample);
       });
   
-      // Use the first sample from the list to build the initial plots
-    //   var firstSample = sampleNames[0];
-    //   buildCharts(firstSample);
-    //   buildMetadata(firstSample);
+      // Default display on screen before user even selects anything
+      var firstID = sampleNames[0];
+      createCharts(firstID);
+      demographicTable(firstID);
     });
   }
   
-  // Initialize the dashboard
+  // Run the dashboard
   init();
   
-
+  // Capture user selection and run function
   function optionChanged(newSample) {
     // Fetch new data each time a new sample is selected
-    barChart(newSample);
+    createCharts(newSample);
     demographicTable(newSample);
 
   }
 
-  //Demographics Panel
+  // Display Demographics Panel
   
   function demographicTable(sample) {
   //Obtain the data from samples.json file
@@ -49,8 +49,8 @@ function init() {
 
         var metadataID = metadataSample[0];
         console.log(metadataID);
+        
         // Select the demographic info results div tag id
-
         var panelBody = d3.select("#sample-metadata");
 
         //Clear the results each time a new id is selected
@@ -67,13 +67,19 @@ function init() {
 }; 
 
 
-// Code for creating the bar chart
+// Create the three charts
 
-function barChart (sample) {
+function createCharts (sample) {
 //Obtain the data from samples.json file
 d3.json("samples.json").then((data) => {
+    
+    // To access the samples data
     var samples = data.samples;
     console.log(samples)
+
+    // Prep for using washing frequency data in metadata in the gauge chart
+    var gaugeMetadata = data.metadata;
+    console.log(gaugeMetadata);
 
     //Match the selected sample from drop down menu with samples.json metadata set of values
     var metadataSample = samples.filter(sampleData => sampleData.id == sample);
@@ -112,9 +118,11 @@ d3.json("samples.json").then((data) => {
     // Plot the bar chart
     Plotly.newPlot("bar",data,layout);
 
+    // Create the bubble chart
     var trace2 = {
         x: indIDs,
         y: BCvalues,
+        text: BClabels,
         mode: "markers",
         marker: {
             size: BCvalues,
@@ -133,6 +141,43 @@ d3.json("samples.json").then((data) => {
     };
 
     Plotly.newPlot("bubble", data2, BClayout)
-});
-};
 
+
+//Match the selected sample from drop down menu with samples.json metadata set of values
+    var gaugeMetadataSample = gaugeMetadata.filter(metaSample => metaSample.id == sample);
+    console.log(gaugeMetadataSample);
+
+    var gaugeMetadatawfreq = gaugeMetadataSample[0];
+    console.log(gaugeMetadatawfreq);
+
+    var washingFreq = gaugeMetadatawfreq.wfreq;
+
+    // Create the gauge chart
+    var data = [
+      {
+        domain: { x: [0, 1], y: [0, 1] },
+        value: washingFreq,
+        title: { text: "<b> Belly Button Washing Frequency </b> <br></br> Scrubs Per Week" },
+        type: "indicator",
+        mode: "gauge+number",
+
+        gauge: {
+          axis: { range: [null, 10] },
+          steps: [
+            { range: [0, 2], color: "pink" },
+            { range: [2, 4], color: "red" },
+            { range: [4, 6], color: "orange" },
+            { range: [6, 8], color: "lightgreen" },
+            { range: [8, 10], color: "green" },
+          ],
+        }
+      }
+    ];
+
+    var layout = { width: 600, height: 450, margin: { t: 0, b: 0 } };
+    Plotly.newPlot('gauge', data, layout);
+});
+
+
+
+};
